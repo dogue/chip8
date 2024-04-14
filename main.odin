@@ -51,6 +51,10 @@ main :: proc() {
         if rl.IsKeyPressed(.D) {
             debug_grid = !debug_grid
         }
+
+        if rl.IsKeyPressed(.S) {
+            rl.TakeScreenshot("chip8.png")
+        }
     }
 
     core.should_exit = true

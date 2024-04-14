@@ -9,3 +9,5 @@ Rendering and emulation are implemented as separate threads with the pixel buffe
 The pixel buffer is represented as a two dimensional array of booleans (`[32][64]bool`) to match the native resolution of the CHIP-8. This resolution gets upscaled 16x at draw time in the render thread.
 
 Pressing `q` will close the program.
+
+![screenshot of emulator window](chip8.png)
