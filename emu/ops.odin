@@ -1,7 +1,6 @@
 //+private
 package chip
 
-import "core:log"
 import "core:sync/chan"
 
 Opcode :: struct {
@@ -30,8 +29,6 @@ fetch :: proc(core: ^Core) -> Opcode {
         full = (u16(high) << 8) | u16(low),
     }
 
-    log.debugf("OPCODE: %4X", op.full)
-    log.debugf("A: %X, B: %X, C: %X, D: %X", op.A, op.B, op.C, op.D)
     return op
 }
 
@@ -40,7 +37,6 @@ decode :: proc(core: ^Core, op: Opcode) {
 
     case 0x0:
         if op.C == 0xE && op.D == 0 {
-            log.debug("INS: clear screen")
             clear_display(core)
         }
 
@@ -73,7 +69,7 @@ decode :: proc(core: ^Core, op: Opcode) {
 send_pixels :: proc(core: ^Core) {
     ok := chan.send(core.display, core.pixels)
     if !ok {
-        log.fatal("could not send pixel data over channel")
+        panic("failed to send pixel buffer to render thread")
     }
 }
 
