@@ -13,8 +13,6 @@ Opcode :: struct {
 }
 
 fetch :: proc(core: ^Core) -> Opcode {
-    log.debug("fetching next instruction")
-    log.debugf("PC: %4X", core.pc)
     if core.pc >= 4096 {
         {}
     }
@@ -32,17 +30,17 @@ fetch :: proc(core: ^Core) -> Opcode {
         full = (u16(high) << 8) | u16(low),
     }
 
-    log.debugf("fetched opcode %4X", op.full)
+    log.debugf("OPCODE: %4X", op.full)
+    log.debugf("A: %X, B: %X, C: %X, D: %X", op.A, op.B, op.C, op.D)
     return op
 }
 
 decode :: proc(core: ^Core, op: Opcode) {
-    log.debugf("decoding opcode %2X", op.A)
     switch op.A {
 
     case 0x0:
         if op.C == 0xE && op.D == 0 {
-            log.debug("clearing screen")
+            log.debug("INS: clear screen")
             clear_display(core)
         }
 
@@ -52,7 +50,6 @@ decode :: proc(core: ^Core, op: Opcode) {
 
     case 0x1:
         addr := op.full & 0xFFF
-        log.debugf("jmp to %3X", addr)
         core.pc = addr
 
     case 0x6:
@@ -63,6 +60,10 @@ decode :: proc(core: ^Core, op: Opcode) {
         val := op.full & 0xFF
         core.var[op.B] += u8(val)
 
+    case 0xA:
+        val := op.full & 0xFFF
+        core.index = val
+
     case 0xD:
         draw(core, op.B, op.C, op.D)
 
@@ -70,7 +71,6 @@ decode :: proc(core: ^Core, op: Opcode) {
 }
 
 send_pixels :: proc(core: ^Core) {
-    log.debug("sending pixel data to raylib")
     ok := chan.send(core.display, core.pixels)
     if !ok {
         log.fatal("could not send pixel data over channel")
@@ -88,24 +88,15 @@ clear_display :: proc(core: ^Core) {
 }
 
 draw :: proc(core: ^Core, x, y, size: u8) {
-    log.debugf("drawing at %d, %d", x, y)
-    x := x
-    y := y
+    x := core.var[x] & 63
+    y := core.var[y] & 31
     core.var[0xF] = 0
 
-    log.debugf("sprite size: %d", size)
     for n in 0 ..< size {
-        log.debugf("n: %d", n)
         curr_x := x
-        data := core.memory[core.index + u16(n)] >> 4
-        log.debugf("data: %X", data)
+        data := core.memory[core.index + u16(n)]
 
         for i := 7; i >= 0; i -= 1 {
-            log.debugf("i: %d", i)
-            if curr_x >= 64 {
-                break
-            }
-
             bit := data & (1 << u8(i))
             if bit > 0 {
                 core.pixels[y][curr_x] = !core.pixels[y][curr_x]
@@ -116,7 +107,7 @@ draw :: proc(core: ^Core, x, y, size: u8) {
             curr_x += 1
         }
         y += 1
-        send_pixels(core)
     }
 
+    send_pixels(core)
 }
