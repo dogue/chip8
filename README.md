@@ -7,3 +7,5 @@ This project utilizes [Raylib](https://www.raylib.com/) for windowing and drawin
 Rendering and emulation are implemented as separate threads with the pixel buffer data being sent from the "core" to the render thread over a chan (similar to goroutine channels).
 
 The pixel buffer is represented as a two dimensional array of booleans (`[32][64]bool`) to match the native resolution of the CHIP-8. This resolution gets upscaled 16x at draw time in the render thread.
+
+Pressing `q` will close the program.
