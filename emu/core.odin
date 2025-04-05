@@ -6,6 +6,13 @@ import "core:time"
 
 PixBuf :: distinct [32][64]bool
 
+Instruction :: bit_field u16 {
+	a: u8 | 4,
+	b: u8 | 4,
+	c: u8 | 4,
+	d: u8 | 4,
+}
+
 Core :: struct {
     memory:      [4096]u8,
     pc:          u16,
@@ -19,7 +26,12 @@ Core :: struct {
     should_exit: bool,
 }
 
-create :: proc() -> ^Core {
+create :: proc {
+    create_empty,
+    create_init,
+}
+
+create_empty :: proc() -> ^Core {
     return new(Core)
 }
 

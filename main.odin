@@ -6,24 +6,30 @@ import "core:sync/chan"
 import "core:thread"
 import "core:time"
 import "emu"
-import rl "vendor:raylib"
+import pb "pixbuffer"
+import "pixbuffer/draw"
 
 main :: proc() {
+    win, err := pb.init_window({
+        title = "CHIP-8",
+        width = 64 * 16,
+        height = 32 * 16,
+        pos = {pb.CENTERED, pb.CENTERED},
+        flags = {},
+    })
+    if err != .None {
+        fmt.panicf("Failed to create window: %v", err)
+    }
+
     prog, _ := os.read_entire_file("ibm-logo2.ch8")
-    core := emu.create_init(prog)
+    core := emu.create(prog)
     pixels := core.display
     core_t := thread.create_and_start_with_data(core, emu.run, context)
-
-    rl.InitWindow(64 * 16, 32 * 16, "CHIP-8")
-    rl.SetTargetFPS(60)
-    rl.SetExitKey(.Q)
-    defer rl.CloseWindow()
-
     pix_data: emu.PixBuf
     debug_grid := false
 
-    for !rl.WindowShouldClose() {
-        rl.BeginDrawing()
+    win_should_close := false
+    for !win_should_close {
 
         if chan.can_recv(pixels) {
             pix_data, _ = chan.recv(pixels)
@@ -31,30 +37,34 @@ main :: proc() {
 
         for rows, i in pix_data {
             for on, j in rows {
-                color := on ? rl.WHITE : rl.BLACK
-                rl.DrawRectangle(i32(j) * 16, i32(i) * 16, 16, 16, color)
+                color := on ? pb.WHITE : pb.BLACK
+                draw.rect(win, j * 16, i * 16, 16, 16, color)
             }
         }
 
         if debug_grid {
             for i in 0 ..< 32 {
-                rl.DrawLine(0, i32(i * 16), 64 * 16, i32(i * 16), rl.DARKGRAY)
+                draw.line(win, 0, i * 16, 64 * 16, i * 16, pb.DARK_GRAY)
             }
 
             for i in 0 ..< 64 {
-                rl.DrawLine(i32(i * 16), 0, i32(i * 16), 32 * 16, rl.DARKGRAY)
+                draw.line(win, i * 16, 0, i * 16, 32 * 16, pb.DARK_GRAY)
             }
         }
 
-        rl.EndDrawing()
+        evt: pb.Event
+        pb.poll_event(&evt)
 
-        if rl.IsKeyPressed(.D) {
-            debug_grid = !debug_grid
+        #partial switch evt.type {
+        case .QUIT: win_should_close = true
+        case .KEYDOWN:
+            #partial switch evt.key.keysym.sym {
+            case .ESCAPE: win_should_close = true
+            case .D: debug_grid = !debug_grid
+            }
         }
 
-        if rl.IsKeyPressed(.S) {
-            rl.TakeScreenshot("chip8.png")
-        }
+        pb.render(win)
     }
 
     core.should_exit = true

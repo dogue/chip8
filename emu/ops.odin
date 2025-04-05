@@ -1,14 +1,14 @@
-//+private
+#+ private
 package chip
 
 import "core:sync/chan"
 
-Opcode :: struct {
-    A:    u8,
-    B:    u8,
-    C:    u8,
-    D:    u8,
-    full: u16,
+// 4x4bit opcodes, A = $F000, B = $0F00, C = $00F0, D = $000F
+Opcode :: bit_field u16 {
+    D: u8 | 4,
+    C: u8 | 4,
+    B: u8 | 4,
+    A: u8 | 4,
 }
 
 fetch :: proc(core: ^Core) -> Opcode {
@@ -21,15 +21,7 @@ fetch :: proc(core: ^Core) -> Opcode {
     low := core.memory[core.pc]
     core.pc += 1
 
-    op := Opcode {
-        A    = high & 0xF0 >> 4,
-        B    = high & 0x0F,
-        C    = low & 0xF0 >> 4,
-        D    = low & 0x0F,
-        full = (u16(high) << 8) | u16(low),
-    }
-
-    return op
+    return Opcode(u16(high) << 8 | u16(low))
 }
 
 decode :: proc(core: ^Core, op: Opcode) {
@@ -45,19 +37,19 @@ decode :: proc(core: ^Core, op: Opcode) {
         }
 
     case 0x1:
-        addr := op.full & 0xFFF
+        addr := u16(op) & 0xFFF
         core.pc = addr
 
     case 0x6:
-        val := op.full & 0xFF
+        val := u16(op) & 0xFF
         core.var[op.B] = u8(val)
 
     case 0x7:
-        val := op.full & 0xFF
+        val := u16(op) & 0xFF
         core.var[op.B] += u8(val)
 
     case 0xA:
-        val := op.full & 0xFFF
+        val := u16(op) & 0xFFF
         core.index = val
 
     case 0xD:
